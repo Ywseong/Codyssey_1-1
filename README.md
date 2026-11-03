@@ -19,7 +19,7 @@
 - Git: 2.56.0.windows.4
 - Visual Studio Code: 1.144.0
 
-## 3. 수행 체크리스트
+## 3. 수행 항목 체크리스트
 - [x] 터미널 기본 조작
 - [ ] 권한 변경 실습
 - [ ] Docker 설치/점검
@@ -30,10 +30,12 @@
 - [ ] 볼륨 영속성
 - [x] Git 설정 + GitHub 연동
 
-## 4. 터미널 기본 조작 실습
+## 4. 검증 방법
+
+터미널 기본 조작 실습
 
 ### 파일/디렉토리 조작
-\```bash
+```bash
 # 현재 위치 확인
 pwd
 
@@ -57,4 +59,4 @@ mv hello-copy.txt hello-rename.txt
 
 # 파일 삭제
 rm hello-rename.txt
-\```
+```
