@@ -21,7 +21,7 @@
 
 ## 3. 수행 항목 체크리스트
 - [x] 터미널 기본 조작
-- [ ] 권한 변경 실습
+- [x] 권한 변경 실습
 - [ ] Docker 설치/점검
 - [ ] hello-world 실행
 - [ ] Dockerfile 빌드/실행
@@ -51,7 +51,6 @@ $ pwd
 
 # 숨김 디렉토리 생성 후 ls / ls -a 비교
 $ mkdir .hidden
-
 # ls: 숨김 항목이 표시되지 않음
 $ ls
 # ls -a: 숨김 항목(.hidden/)까지 표시됨
@@ -93,40 +92,29 @@ hello2-rename.txt  mv-test/  test.txt
 $ ls mv-test/ 
 hello.txt
 
-# 상대경로와 절대경로
-# 상대경로: 현재 위치(/d/practice) 기준으로 이동
+# 상대경로와 절대경로 비교
+# /d/practice에서 상대경로로 이동 → 성공
 $ cd mv-test
 $ pwd
 /d/practice/mv-test
-$ cd ..
-$ pwd
-/d/practice
-$ cd ./mv-test
-$ pwd
-/d/practice/mv-test
-$ cd ..
 
-# 절대경로: 루트(/)부터 전체 경로를 지정
-$ cd /d/practice/mv-test
-$ pwd
-/d/practice/mv-test
-$ cd ..
-
-# 상대경로와 절대경로의 차이
+# 홈으로 이동 후 같은 상대경로 → 실패
 $ cd ~
-$ pwd
-/c/Users/<사용자명>
-# 홈(~) 기준으로 찾으므로 실패
 $ cd mv-test
 bash: cd: mv-test: No such file or directory
-# 절대경로는 현재 위치와 관계없이 성공
+
+# 홈에서 절대경로로 이동 → 성공
 $ cd /d/practice/mv-test
 $ pwd
 /d/practice/mv-test
+
+# 실습 폴더로 복귀
 $ cd ..
 $ pwd
 /d/practice
 
+# 정리: 절대경로는 /부터 시작해 어디서든 같은 위치를 가리키고,
+# 상대경로는 현재 위치 기준이라 위치에 따라 결과가 달라진다.
 
 # 파일 삭제
 $ rm hello2-rename.txt
@@ -150,3 +138,122 @@ $ ls -a
 
 
 ```
+
+### 4-2. 권한 변경 실습(4-1에 이어 practice에서 시작)
+### Git Bash로 chmod 사용 제약 있으므로 여기서부터 WSL2 ubuntu로 진행. 
+```powershell
+PS> wsl --install Ubuntu # 파워셀에서 우분투 최신 LTS 설치
+PS> wsl -d Ubuntu # 파워셀에서 입력시 우분투 실행, 혹은 윈도우 검색에서 우분투 실행
+```
+
+```bash
+# 홈디렉터리 이동
+$ cd ~
+$ pwd
+/home/<사용자명>
+# 실습 파일 및 디렉터리 생성
+$ mkdir auth_dir
+$ touch auth_file.txt
+$ ls -l
+total 4
+drwxr-xr-x 2 <사용자명> <사용자명> 4096 Nov  4 21:28 auth_dir
+-rw-r--r-- 1 <사용자명> <사용자명>    0 Nov  4 21:28 auth_file.txt
+# 권한 변경
+$ chmod 756 auth_dir
+$ chmod 475 auth_file.txt
+$ ls -l
+total 4
+drwxr-xrw- 2 <사용자명> <사용자명> 4096 Nov  4 21:28 auth_dir
+-r--rwxr-x 1 <사용자명> <사용자명>    0 Nov  4 21:28 auth_file.txt
+```
+
+### chmod 개념 정리
+
+chmod(change mode)는 파일과 디렉터리의 권한을 바꾸는 명령이다.
+
+- 권한 종류: r(read), w(write), x(execute)
+- 한 자리 숫자는 rwx를 3비트로 본 값이다. r=4, w=2, x=1을 더하며, 예를 들어 7은 111(rwx), 5는 101(r-x)이다.
+- 숫자 세 자리는 순서대로 소유자, 그룹, 그 외 사용자의 권한이다. 따라서 9비트로 000부터 777까지 표현한다.
+- 이번 실습의 756은 rwxr-xrw-, 475는 r--rwxr-x가 된다.
+
+
+
+5. 트러블 슈팅 작성.
+```bash
+# 실습 파일, 디렉터리 생성 및 권한 확인
+$ touch auth_file.txt
+$ mkdir auth_dir
+$ ls -l
+total 0
+drwxr-xr-x 1 <사용자명> 1049089 0 Nov  4 19:55 auth_dir/
+-rw-r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
+
+
+```
+
+## 5. 트러블슈팅
+
+### Case 1. Git Bash에서 chmod가 반영되지 않음
+
+**문제**
+Git Bash를 사용해 권한 변경을 시도했으나 변경되지 않음.
+
+```bash
+$ touch auth_file.txt
+$ mkdir auth_dir
+
+$ ls -l
+total 0
+drwxr-xr-x 1 <사용자명> 1049089 0 Nov  4 19:55 auth_dir/
+-rw-r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
+
+
+$ chmod 755 auth_file.txt
+$ chmod 644 auth_dir
+$ ls -l
+total 0
+drwxr-xr-x 1 <사용자명> 1049089 0 Nov  4 19:55 auth_dir/
+-rw-r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
+```
+
+**원인 가설**
+Git Bash는 윈도우 파일 시스템 기반이라 리눅스와 같이 세세한 권한 변경이 불가능 할것 같다.
+
+**확인**
+
+윈도우 탐색기에서 `auth_file.txt`의 속성 → 특성 → "읽기 전용"을 체크하고 `ls -l`로 확인했다.
+
+```bash
+# 읽기 전용 체크 후
+$ ls -l auth_file.txt
+-r--r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
+
+# 읽기 전용 해제 후
+$ ls -l auth_file.txt
+-rw-r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
+```
+
+따라서 윈도우 파일시스템 기반의 Git Bash에서 chmod 444, 644는 사용가능하다.
+
+```bash
+$ ls -l auth_file.txt
+-rw-r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
+
+# 쓰기 권한 제거 → 반영됨 (탐색기에서 "읽기 전용" 체크됨)
+$ chmod 444 auth_file.txt
+$ ls -l auth_file.txt
+-r--r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
+
+# 쓰기 권한 복구 → 반영됨 (탐색기에서 "읽기 전용" 해제됨)
+$ chmod 644 auth_file.txt
+$ ls -l auth_file.txt
+-rw-r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
+```
+
+**해결/대안**
+Git Bash에서 파일 권한은 644, 444만 가능하다는걸 알게되었다. 더 다양한 파일 권한을 주기 위해선 완전한 리눅스 CLI를 사용하는것이 필요하다. 
+따라서 이후의 실습은 WSL2 Ubuntu 환경에서 진행하도록 한다.
+
+**WSL의 문제**
+WSL이라도 /mnt/d는 NTFS라 리눅스 권한이 제대로 저장되지 않는다. 
+따라서 cd ~로 홈 디렉터리에서 실습을 진행한다.
