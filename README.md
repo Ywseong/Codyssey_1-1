@@ -560,7 +560,7 @@ PS> curl.exe http://localhost:8081
 
 같은 이미지로 띄운 컨테이너들이 각자 자기 80번 포트를 쓰고, 내 PC 쪽 포트(8080, 8081)만 다르게 연결해 충돌 없이 둘 다 접속된다. 포트를 연결하지 않은 `my-web`은 컨테이너 안에서는 동작하지만 외부에서 접속할 수 없다.
 
-```powershell
+
 
 다음 실습 전 모든 컨테이너 삭제
 ```powershell
@@ -570,7 +570,76 @@ f63c25d3ea22
 7ac75f50d3b5
 PS> docker ps -a
 CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+### 4-8. 바인드 마운트
+
+호스트(내 PC)의 폴더를 컨테이너 안 폴더에 직접 연결한다. 복사가 아니라 연결이라, 호스트에서 파일을 고치면 재빌드나 재시작 없이 컨테이너에 바로 반영된다.
+
 ```powershell
+# 호스트의 web 폴더를 NGINX HTML 폴더에 연결 (이미지는 기본 nginx 사용)
+PS> docker run -d --name mount_ex -p 8080:80 -v D:\Codyssey\Codyssey_1-1\web:/usr/share/nginx/html/ nginx
+Unable to find image 'nginx:latest' locally
+latest: Pulling from library/nginx
+...
+Status: Downloaded newer image for nginx:latest
+80d082f84622656da7a32aa80ff6ed46402cda726a73d4ac0d3f16d6b6eb6c5c
+
+PS> docker ps
+CONTAINER ID   IMAGE     COMMAND                   CREATED          STATUS          PORTS                                     NAMES
+80d082f84622   nginx     "/docker-entrypoint.…"   48 seconds ago   Up 48 seconds   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   mount_ex
+
+# 컨테이너 안 HTML 폴더에 호스트 web 폴더의 파일만 보임 (기본 50x.html이 가려짐)
+PS> docker exec mount_ex ls /usr/share/nginx/html
+index.html
+```
+
+저장소 폴더에서 실행한다면 경로를 `${PWD}\web`으로 써도 된다.
+
+#### 변경 전
+```powershell
+PS> curl.exe http://localhost:8080
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Dockerfile실습</title>
+</head>
+<body>
+    <div>
+        <h1>Dockerfile 실습</h1>
+        <p>Dockerfile을 이용한 이미지 빌드 및 컨테이너 실행 실습</p>
+    </div>
+</body>
+</html>
+```
+
+![바인드 마운트 변경 전](./images/바운드마운트.png)
+
+#### 변경 후
+호스트의 `web/index.html`에 `<p>바인드마운트 적용</p>` 한 줄을 추가하고 저장했다. 컨테이너는 그대로 둔 채 다시 접속했다.
+
+```powershell
+PS> curl.exe http://localhost:8080
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Dockerfile실습</title>
+</head>
+<body>
+    <div>
+        <h1>Dockerfile 실습</h1>
+        <p>Dockerfile을 이용한 이미지 빌드 및 컨테이너 실행 실습</p>
+        <p>바인드마운트 적용</p>
+    </div>
+</body>
+</html>
+```
+
+![바인드 마운트 변경 후](./images/바운드마운트2.png)
+
+Dockerfile의 `COPY`는 빌드할 때 파일을 이미지에 복사해 고정하므로, 파일을 고치면 다시 빌드해야 반영된다. 바인드 마운트는 호스트 폴더를 그대로 보여주기 때문에 수정이 즉시 반영된다.
 
 ## 5. 트러블슈팅
 
