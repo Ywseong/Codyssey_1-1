@@ -854,3 +854,82 @@ PS> wsl -l -v
 **해결/대안**
 Docker Desktop에서 일시 정지를 해제(Resume)한 뒤 `docker info`를 다시 실행하니 Server 부분이 정상 출력됐다. 결과는 [4-3 Docker 설치/점검](#4-3-docker-설치점검) 참고.
 Docker Desktop은 한동안 컨테이너가 없으면 리소스 절약을 위해 엔진을 멈출 수 있으므로, 실습 전에 엔진 상태를 먼저 확인한다.
+
+### Case 3. 포트 충돌로 컨테이너 실행 실패
+
+**문제**
+8080 포트를 쓰는 컨테이너가 있는 상태에서 같은 포트로 컨테이너를 하나 더 실행하자 실패했다.
+
+```powershell
+PS> docker run -d -p 8080:80 --name port-a my-web:1.0
+c4176eee526b22ee1781e37f112c2fcbabfb3d38b5dcdee044c045fde05aeae7
+PS> docker run -d -p 8080:80 --name port-b my-web:1.0
+e2088adc407c121f768cb68842c0f47831c5c19e2c51b92dc5b2fed59246d82e
+docker: Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint port-b (646cf3c7...): Bind for 0.0.0.0:8080 failed: port is already allocated
+```
+
+**원인 가설**
+호스트의 8080 포트를 다른 프로세스가 이미 사용하고 있어서 새 컨테이너가 포트를 잡지 못한 것 같다.
+
+**확인**
+`netstat`으로 8080 포트를 LISTENING 중인 프로세스의 PID를 찾고, `tasklist`로 어떤 프로그램인지 확인했다.
+
+```powershell
+# 마지막 열이 PID
+PS> netstat -ano | findstr :8080
+  TCP    0.0.0.0:8080           0.0.0.0:0              LISTENING       19204
+  TCP    127.0.0.1:8080         0.0.0.0:0              LISTENING       19532
+  TCP    [::]:8080              [::]:0                 LISTENING       19204
+  TCP    [::1]:8080             [::]:0                 LISTENING       19532
+
+PS> tasklist /FI "PID eq 19204"
+이미지 이름                    PID 세션 이름              세션#  메모리 사용
+========================= ======== ================ =========== ============
+com.docker.backend.exe       19204 Console                    1    186,272 K
+
+PS> tasklist /FI "PID eq 19532"
+이미지 이름                    PID 세션 이름              세션#  메모리 사용
+========================= ======== ================ =========== ============
+wslrelay.exe                 19532 Console                    1     11,308 K
+
+# 어떤 컨테이너가 8080을 쓰는지 확인
+PS> docker ps
+CONTAINER ID   IMAGE        COMMAND                   CREATED              STATUS              PORTS                                     NAMES
+c4176eee526b   my-web:1.0   "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   port-a
+```
+
+8080을 점유한 `com.docker.backend.exe`와 `wslrelay.exe`는 Docker Desktop이 컨테이너 포트를 Windows로 중계하는 프로세스이고, 실제 원인은 그 포트를 쓰는 `port-a` 컨테이너였다.
+
+**해결/대안**
+Docker 프로세스를 강제 종료하면 Docker 전체가 멈추므로, 포트를 점유한 컨테이너를 삭제해 포트를 해제했다. 해제 후 LISTENING 줄이 사라진 것을 확인하고, 충돌로 생성만 된 `port-b`를 지운 뒤 다시 실행했다.
+
+```powershell
+PS> docker rm -f port-a
+port-a
+
+# LISTENING 줄이 사라짐 (TIME_WAIT는 직전 연결의 종료 대기 상태)
+PS> netstat -ano | findstr :8080
+  TCP    127.0.0.1:58662        127.0.0.1:8080         TIME_WAIT       0
+
+PS> docker rm port-b
+port-b
+PS> docker run -d -p 8080:80 --name port-b my-web:1.0
+18961c280c7dccb2932ede9f4035e7d5a3c1fb4126c789bbca100dfa0c49f595
+PS> docker ps
+CONTAINER ID   IMAGE        COMMAND                   CREATED         STATUS         PORTS                                     NAMES
+18961c280c7d   my-web:1.0   "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   port-b
+```
+
+다른 포트(예: `-p 8081:80`)로 바꿔 실행하는 것도 대안이다.
+
+#### 포트 충돌 진단/해제 절차 정리
+
+Docker가 아닌 일반 프로그램이 포트를 점유한 경우에는 해당 프로세스를 종료한다.
+
+| 환경 | 포트 사용 프로세스 확인 | 포트 해제 |
+|---|---|---|
+| Windows | `netstat -ano \| findstr :8080` → `tasklist /FI "PID eq <PID>"` | `taskkill /PID <PID> /F` |
+| Linux / WSL | `ss -ltnp \| grep 8080` 또는 `lsof -i :8080` | `kill <PID>` (응답 없으면 `kill -9 <PID>`) |
+| Docker | `docker ps`의 PORTS 열 | `docker stop <이름>` 또는 `docker rm -f <이름>` |
+
+PID가 Docker 프로세스(`com.docker.backend.exe`, `wslrelay.exe`)로 나오면 프로세스를 종료하지 말고 원인 컨테이너를 정리한다.
