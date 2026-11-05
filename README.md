@@ -22,13 +22,14 @@
 ## 3. 수행 항목 체크리스트
 - [x] 터미널 기본 조작
 - [x] 권한 변경 실습
-- [ ] Docker 설치/점검
+- [x] Docker 설치/점검
+- [ ] Docker 기본 운영 (이미지/컨테이너/로그/리소스)
 - [ ] hello-world 실행
 - [ ] Dockerfile 빌드/실행
 - [ ] 포트 매핑 접속
 - [ ] 바인드 마운트
 - [ ] 볼륨 영속성
-- [x] Git 설정 + GitHub 연동
+- [ ] Git 설정 + GitHub 연동
 
 ## 4. 검증 방법
 
@@ -140,7 +141,7 @@ $ ls -a
 ```
 
 ### 4-2. 권한 변경 실습(4-1에 이어 practice에서 시작)
-### Git Bash로 chmod 사용 제약 있으므로 여기서부터 WSL2 ubuntu로 진행. 
+### Git Bash로 chmod 사용 제약 있으므로 WSL2 ubuntu로 진행. 
 ```powershell
 PS> wsl --install Ubuntu # 파워셀에서 우분투 최신 LTS 설치
 PS> wsl -d Ubuntu # 파워셀에서 입력시 우분투 실행, 혹은 윈도우 검색에서 우분투 실행
@@ -176,20 +177,51 @@ chmod(change mode)는 파일과 디렉터리의 권한을 바꾸는 명령이다
 - 숫자 세 자리는 순서대로 소유자, 그룹, 그 외 사용자의 권한이다. 따라서 9비트로 000부터 777까지 표현한다.
 - 이번 실습의 756은 rwxr-xrw-, 475는 r--rwxr-x가 된다.
 
-
-
-5. 트러블 슈팅 작성.
-```bash
-# 실습 파일, 디렉터리 생성 및 권한 확인
-$ touch auth_file.txt
-$ mkdir auth_dir
-$ ls -l
-total 0
-drwxr-xr-x 1 <사용자명> 1049089 0 Nov  4 19:55 auth_dir/
--rw-r--r-- 1 <사용자명> 1049089 0 Nov  4 19:55 auth_file.txt
-
-
+### 4-3 .Docker 설치/점검
+1. Docker 공식 사이트에서 Docker Desktop for Windows 설치 파일 다운로드
+```powershell
+PS> wsl -l -v
+  NAME              STATE           VERSION
+* docker-desktop    Stopped         2
+  Ubuntu            Stopped         2
 ```
+
+2. 도커 데몬 구동.
+현재 상태가 Stopped이므로. Docker Desktop 앱을 띄우고 창 왼쪽 아래 resume 버튼을 눌러 구동시킨다.
+```powershell
+PS> D:\Codyssey> wsl -l -v
+  NAME              STATE           VERSION
+* docker-desktop    Running         2
+  Ubuntu            Stopped         2
+```
+
+3. 버전확인
+```powershell
+PS> docker -v
+Docker version 29.9.2, build a82e528
+```
+
+4. 정보확인
+```powershell
+PS> docker info # 간략히 정리
+Client:
+ Version:    29.9.2
+ Context:    desktop-linux
+
+Server:
+ Containers: 0
+ Images: 0
+ Server Version: 29.9.2
+ Kernel Version: 6.18.54.1-microsoft-standard-WSL2
+ Operating System: Docker Desktop
+ OSType: linux
+ Name: docker-desktop
+```
+
+
+
+
+
 
 ## 5. 트러블슈팅
 
