@@ -35,7 +35,7 @@ exit /b
 :install_or_upgrade
 echo.
 echo [%~2] Checking
-winget list --id %1 -e >nul 2>&1
+winget list --id %1 -e --accept-source-agreements >nul 2>&1
 if %errorlevel% neq 0 (
     echo %~2 not found - installing
     winget install --id %1 %WINGET_OPTS%
