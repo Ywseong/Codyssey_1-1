@@ -17,7 +17,7 @@
   - Git Bash (MSYS2 기반 리눅스 CLI 에뮬레이터): 4-1 터미널 조작, 트러블슈팅 Case 1
   - WSL2 Ubuntu (bash): 4-2 권한 실습
   - PowerShell: WSL 설치, 4-3 이후 Docker 명령
-- WSL2 Ubuntu: (버전 확인 후 기입, `cat /etc/os-release`)
+- WSL2 Ubuntu: Ubuntu 26.04.1 LTS
 - Docker: Docker Desktop 4.98.0 (Engine 29.9.2, WSL2 백엔드)
 - Git: 2.56.0.windows.4
 - Visual Studio Code: 1.144.0
@@ -33,9 +33,9 @@
 - [x] 컨테이너 실행 실습 (hello-world, ubuntu)
 - [x] Dockerfile 빌드/실행
 - [x] 포트 매핑 접속
-- [ ] 바인드 마운트
-- [ ] 볼륨 영속성
-- [ ] Git 설정 + GitHub 연동
+- [x] 바인드 마운트
+- [x] 볼륨 영속성
+- [x] Git 설정 + GitHub 연동
 
 ## 4. 검증 방법
 
@@ -640,6 +640,116 @@ PS> curl.exe http://localhost:8080
 ![바인드 마운트 변경 후](./images/바운드마운트2.png)
 
 Dockerfile의 `COPY`는 빌드할 때 파일을 이미지에 복사해 고정하므로, 파일을 고치면 다시 빌드해야 반영된다. 바인드 마운트는 호스트 폴더를 그대로 보여주기 때문에 수정이 즉시 반영된다.
+
+실습 전 컨테이너 삭제
+```powershell
+PS> docker rm -f mount_ex
+mount_ex
+PS> docker ps -a
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+### 4-9. Docker 볼륨 영속성
+
+볼륨은 Docker가 관리하는 저장 공간이다. 컨테이너와 별도로 존재하므로 컨테이너를 삭제해도 데이터가 남는다.
+
+```powershell
+# 볼륨 생성 및 확인
+PS> docker volume create vol_ex
+vol_ex
+PS> docker volume ls
+DRIVER    VOLUME NAME
+local     vol_ex
+
+# 볼륨을 /data에 연결한 컨테이너에서 파일 작성
+PS> docker run -it --name uvol_ex -v vol_ex:/data ubuntu
+root@542935e99ed6:/# ls
+bin  boot  data  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@542935e99ed6:/# cd data
+root@542935e99ed6:/data# echo "volume test" > test.txt
+root@542935e99ed6:/data# exit
+exit
+
+# 컨테이너 삭제
+PS> docker rm -f uvol_ex
+uvol_ex
+PS> docker ps -a
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+# 같은 볼륨을 연결한 새 컨테이너에서 확인
+PS> docker run -it --name uvol_ex2 -v vol_ex:/data ubuntu
+root@7a16fd3169ae:/# cd data/
+root@7a16fd3169ae:/data# ls
+test.txt
+root@7a16fd3169ae:/data# cat test.txt
+volume test
+root@7a16fd3169ae:/data# exit
+exit
+```
+
+첫 컨테이너(`542935e99ed6`)에서 작성한 `test.txt`가 컨테이너를 삭제한 뒤 새로 만든 컨테이너(`7a16fd3169ae`)에서도 같은 내용으로 확인됐다. 컨테이너 ID가 다르므로 다른 컨테이너이고, 데이터는 컨테이너가 아니라 볼륨 `vol_ex`에 저장돼 유지된 것이다.
+
+`ubuntu` 이미지에는 원래 `/data` 폴더가 없지만, `-v vol_ex:/data`로 연결하면서 그 경로가 생겼다.
+
+### 4-10. Git 설정 및 GitHub 연동
+
+#### Git 사용자 정보 / 기본 브랜치 설정
+
+```powershell
+PS> git config --global user.name "Ywseong"
+PS> git config --global user.email "yyc8897@gmail.com"
+PS> git config --global init.defaultBranch main
+
+PS> git config --list
+diff.astextplain.textconv=astextplain
+filter.lfs.clean=git-lfs clean -- %f
+filter.lfs.smudge=git-lfs smudge -- %f
+filter.lfs.process=git-lfs filter-process
+filter.lfs.required=true
+http.sslbackend=schannel
+core.autocrlf=true
+core.fscache=true
+core.symlinks=false
+pull.rebase=false
+credential.helper=manager
+credential.https://dev.azure.com.usehttppath=true
+init.defaultbranch=master
+user.name=Ywseong
+user.email=yyc8897@gmail.com
+init.defaultbranch=main
+core.repositoryformatversion=0
+core.filemode=false
+core.bare=false
+core.logallrefupdates=true
+core.symlinks=false
+core.ignorecase=true
+remote.origin.url=https://github.com/Ywseong/Codyssey_1-1.git
+remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+branch.main.remote=origin
+branch.main.merge=refs/heads/main
+branch.main.vscode-merge-base=origin/main
+```
+
+`git config --list`는 시스템 설정, 전역 설정(`--global`), 저장소 설정 순서로 출력한다. `init.defaultbranch`가 두 번 나오는데, 위의 `master`는 Git for Windows 설치 시 들어간 시스템 기본값이고 아래 `main`이 직접 설정한 전역 값이다. 같은 항목은 뒤에 나온 값이 적용되므로 새 저장소의 기본 브랜치는 `main`이 된다.
+`remote.origin.url`과 `branch.main.*`은 이 저장소가 GitHub 원격 저장소와 연결돼 있음을 보여준다.
+
+
+#### VSCode GitHub 연동
+
+VSCode 왼쪽 아래 계정 메뉴에서 GitHub 계정(`Ywseong`)으로 로그인된 것을 확인했다.
+
+![VSCode GitHub 로그인](./images/깃연동2.png)
+
+소스 제어 탭의 커밋 그래프에서 로컬 `main`과 원격 `origin/main`(구름 아이콘)이 같은 커밋을 가리켜, 저장소가 GitHub와 연동되고 push된 상태임을 확인했다.
+
+![VSCode 소스 제어 연동](./images/깃연동1.png)
+
+그래프 중간의 작성자가 `unknown`인 커밋은 Git 사용자 정보를 설정하지 않은 PC에서 커밋한 것이다. 실습실 자리가 바뀔 때마다 `git config --list`로 사용자 정보를 먼저 확인한다.
+
+#### Git과 GitHub의 차이
+
+Git은 내 컴퓨터에서 파일의 변경 이력을 관리하는 버전 관리 도구다. GitHub는 Git 저장소를 인터넷에 올려 두고 다른 사람과 함께 작업할 수 있게 해주는 원격 저장소 서비스다. 이 과제에서는 로컬에서 Git으로 커밋하고, GitHub에 push해서 저장소 링크로 결과물을 제출한다.
+
 
 ## 5. 트러블슈팅
 
