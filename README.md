@@ -738,11 +738,11 @@ branch.main.vscode-merge-base=origin/main
 
 VSCode 왼쪽 아래 계정 메뉴에서 GitHub 계정(`Ywseong`)으로 로그인된 것을 확인했다.
 
-![VSCode GitHub 로그인](./images/깃연동2.png)
+![VSCode GitHub 로그인](./images/깃연동1.png)
 
 소스 제어 탭의 커밋 그래프에서 로컬 `main`과 원격 `origin/main`(구름 아이콘)이 같은 커밋을 가리켜, 저장소가 GitHub와 연동되고 push된 상태임을 확인했다.
 
-![VSCode 소스 제어 연동](./images/깃연동1.png)
+![VSCode 소스 제어 연동](./images/깃연동2.png)
 
 그래프 중간의 작성자가 `unknown`인 커밋은 Git 사용자 정보를 설정하지 않은 PC에서 커밋한 것이다. 실습실 자리가 바뀔 때마다 `git config --list`로 사용자 정보를 먼저 확인한다.
 
