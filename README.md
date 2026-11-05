@@ -31,8 +31,8 @@
 - [x] Docker 설치/점검
 - [x] Docker 기본 운영 (이미지/컨테이너/로그/리소스)
 - [x] 컨테이너 실행 실습 (hello-world, ubuntu)
-- [ ] Dockerfile 빌드/실행
-- [ ] 포트 매핑 접속
+- [x] Dockerfile 빌드/실행
+- [x] 포트 매핑 접속
 - [ ] 바인드 마운트
 - [ ] 볼륨 영속성
 - [ ] Git 설정 + GitHub 연동
@@ -438,7 +438,11 @@ Codyssey_1-1/
 
 #### Dockerfile
 ```dockerfile
-(실제 Dockerfile 내용 붙여넣기)
+FROM nginx
+LABEL org.opencontainers.image.title="My Nginx Web Server"
+LABEL org.opencontainers.image.description="A simple Nginx web server."
+LABEL org.opencontainers.image.authors="Wooseong Yeo"
+COPY ./web /usr/share/nginx/html/
 ```
 
 | 지시어 | 목적 |
@@ -457,7 +461,116 @@ PS> docker build -t my-web:1.0 .
  => [2/2] COPY ./web /usr/share/nginx/html/
  => exporting to image
  => => naming to docker.io/library/my-web:1.0
+
+PS> docker images
+IMAGE           ID             DISK USAGE   CONTENT SIZE   EXTRA
+my-web:1.0      a9ab69b12fc7        241MB         63.9MB
+ubuntu:latest   6a06111c3b0a        163MB         45.9MB
 ```
+
+#### LABEL 적용 확인
+```powershell
+# 출력 발췌
+PS> docker inspect my-web:1.0
+        "RepoTags": [
+            "my-web:1.0"
+        ],
+            "Labels": {
+                "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>",
+                "org.opencontainers.image.authors": "Wooseong Yeo",
+                "org.opencontainers.image.description": "A simple Nginx web server.",
+                "org.opencontainers.image.title": "My Nginx Web Server"
+            },
+```
+직접 추가한 LABEL 세 개가 들어갔고, `maintainer`는 베이스 이미지(nginx)에서 물려받은 값이다.
+
+#### 실행
+```powershell
+PS> docker run -d --name my-web my-web:1.0
+7ac75f50d3b5a0618599ba59c7a6e7b2cc28484a0151e09ea16019c671e0e020
+PS> docker ps
+CONTAINER ID   IMAGE        COMMAND                   CREATED         STATUS         PORTS     NAMES
+7ac75f50d3b5   my-web:1.0   "/docker-entrypoint.…"   4 seconds ago   Up 3 seconds   80/tcp    my-web
+```
+
+### 4-7. 포트 매핑 접속
+
+컨테이너는 자기만의 네트워크와 포트를 가지고 있어 외부에서 바로 접근할 수 없다. `-p 호스트포트:컨테이너포트`로 내 PC의 포트를 컨테이너 포트에 연결해야 브라우저에서 접속할 수 있다.
+
+#### 8080 → 80
+
+```powershell
+PS> docker run -d -p 8080:80 --name my-web-8080 my-web:1.0
+135fc624efcccda171c61ac90e97e65e32545a8d2cb723bdb238fef26f5fe9b6
+
+# 포트를 연결하지 않은 my-web과 PORTS 칸 비교
+PS> docker ps
+CONTAINER ID   IMAGE        COMMAND                   CREATED          STATUS          PORTS                                     NAMES
+135fc624efcc   my-web:1.0   "/docker-entrypoint.…"   10 seconds ago   Up 9 seconds    0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   my-web-8080
+7ac75f50d3b5   my-web:1.0   "/docker-entrypoint.…"   27 minutes ago   Up 27 minutes   80/tcp                                    my-web
+
+PS> curl.exe http://localhost:8080
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Dockerfile실습</title>
+</head>
+<body>
+    <div>
+        <h1>Dockerfile 실습</h1>
+        <p>Dockerfile을 이용한 이미지 빌드 및 컨테이너 실행 실습</p>
+    </div>
+</body>
+</html>
+```
+
+![localhost:8080 접속 결과](./images/포트매핑결과.png)
+
+#### 8081 → 80
+
+```powershell
+PS> docker run -d -p 8081:80 --name my-web-8081 my-web:1.0
+f63c25d3ea2292f1d56d181bf5b689d3a3f7b63ec4c69b0076c3c100424e7206
+
+# 같은 이미지로 띄운 세 컨테이너의 PORTS 비교
+PS> docker ps
+CONTAINER ID   IMAGE        COMMAND                   CREATED          STATUS          PORTS                                     NAMES
+f63c25d3ea22   my-web:1.0   "/docker-entrypoint.…"   3 seconds ago    Up 3 seconds    0.0.0.0:8081->80/tcp, [::]:8081->80/tcp   my-web-8081
+135fc624efcc   my-web:1.0   "/docker-entrypoint.…"   12 minutes ago   Up 12 minutes   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   my-web-8080
+7ac75f50d3b5   my-web:1.0   "/docker-entrypoint.…"   39 minutes ago   Up 39 minutes   80/tcp                                    my-web
+
+PS> curl.exe http://localhost:8081
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Dockerfile실습</title>
+</head>
+<body>
+    <div>
+        <h1>Dockerfile 실습</h1>
+        <p>Dockerfile을 이용한 이미지 빌드 및 컨테이너 실행 실습</p>
+    </div>
+</body>
+</html>
+```
+
+![localhost:8081 접속 결과](./images/포트매핑결과2.png)
+
+같은 이미지로 띄운 컨테이너들이 각자 자기 80번 포트를 쓰고, 내 PC 쪽 포트(8080, 8081)만 다르게 연결해 충돌 없이 둘 다 접속된다. 포트를 연결하지 않은 `my-web`은 컨테이너 안에서는 동작하지만 외부에서 접속할 수 없다.
+
+```powershell
+
+다음 실습 전 모든 컨테이너 삭제
+```powershell
+PS> docker rm -f $(docker ps -aq)
+f63c25d3ea22
+135fc624efcc
+7ac75f50d3b5
+PS> docker ps -a
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```powershell
 
 ## 5. 트러블슈팅
 
