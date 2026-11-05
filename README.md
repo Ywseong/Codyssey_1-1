@@ -23,8 +23,8 @@
 - [x] 터미널 기본 조작
 - [x] 권한 변경 실습
 - [x] Docker 설치/점검
-- [ ] Docker 기본 운영 (이미지/컨테이너/로그/리소스)
-- [ ] hello-world 실행
+- [x] Docker 기본 운영 (이미지/컨테이너/로그/리소스)
+- [ ] 컨테이너 실행 실습 (hello-world, ubuntu)
 - [ ] Dockerfile 빌드/실행
 - [ ] 포트 매핑 접속
 - [ ] 바인드 마운트
@@ -177,7 +177,7 @@ chmod(change mode)는 파일과 디렉터리의 권한을 바꾸는 명령이다
 - 숫자 세 자리는 순서대로 소유자, 그룹, 그 외 사용자의 권한이다. 따라서 9비트로 000부터 777까지 표현한다.
 - 이번 실습의 756은 rwxr-xrw-, 475는 r--rwxr-x가 된다.
 
-### 4-3 .Docker 설치/점검
+### 4-3. Docker 설치/점검
 1. Docker 공식 사이트에서 Docker Desktop for Windows 설치 파일 다운로드
 ```powershell
 PS> wsl -l -v
@@ -218,9 +218,111 @@ Server:
  Name: docker-desktop
 ```
 
+### 4-4. Docker 기본 운영 (이미지/컨테이너/로그/리소스)
 
+```powershell
+# 이미지 확인
+PS> docker images
+IMAGE   ID             DISK USAGE   CONTENT SIZE   EXTRA
+# 이미지 받기
+PS> docker pull nginx
+Using default tag: latest
+latest: Pulling from library/nginx
+a670537bed70: Pull complete
+6fc242d221a6: Pull complete
+a071113ac575: Pull complete
+c139fe92686d: Pull complete
+d322f1bf41d8: Pull complete
+9f604dae09b2: Pull complete
+6e2ab1f3ef4e: Pull complete
+05a7d8870b4b: Download complete
+ca81da665177: Download complete
+Digest: sha256:5ab5b0b01097420873a3f3330f44248e34a3c2a3e8d5ee30658aeae8cb7435da
+Status: Downloaded newer image for nginx:latest
+docker.io/library/nginx:latest 
 
+PS> docker images
+IMAGE          ID             DISK USAGE   CONTENT SIZE   EXTRA
+nginx:latest   5ab5b0b01097        243MB         66.8MB
 
+# 실행중인 컨테이너 목록
+PS> docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+# 이미지로 컨테이너 생성(백그라운드 실행 및 이름 지정)
+PS> docker run -d --name test nginx
+44cf8c1df6c9a1c9ee7580e687dcc0cbb6d14b95a35fa0bed0b4039a28185c99
+PS> docker ps
+CONTAINER ID   IMAGE     COMMAND                   CREATED          STATUS          PORTS     NAMES
+44cf8c1df6c9   nginx     "/docker-entrypoint.…"   12 seconds ago   Up 11 seconds   80/tcp    test
+
+# 컨테이너 로그 확인
+PS> docker logs test
+/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+...
+/docker-entrypoint.sh: Configuration complete; ready for start up
+2026/11/05 05:13:23 [notice] 1#1: using the "epoll" event method
+2026/11/05 05:13:23 [notice] 1#1: nginx/1.31.8
+2026/11/05 05:13:23 [notice] 1#1: OS: Linux 6.18.54.1-microsoft-standard-WSL2
+2026/11/05 05:13:23 [notice] 1#1: start worker processes
+2026/11/05 05:13:23 [notice] 1#1: start worker process 29
+2026/11/05 05:13:23 [notice] 1#1: start worker process 30
+...
+2026/11/05 05:13:23 [notice] 1#1: start worker process 52
+
+# 컨테이너 리소스 사용량 확인 (실시간 성능 모니터링은 --no-stream 옵션 제거)
+PS> docker stats --no-stream
+CONTAINER ID   NAME      CPU %     MEM USAGE / LIMIT     MEM %     NET I/O         BLOCK I/O         PIDS
+44cf8c1df6c9   test      0.00%     23.22MiB / 15.25GiB   0.15%     1.17kB / 126B   14.6MB / 12.3kB   25 
+
+# 컨테이너 중지
+PS> docker stop test
+PS> docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+PS> docker ps -a
+CONTAINER ID   IMAGE     COMMAND                   CREATED          STATUS                      PORTS     NAMES
+44cf8c1df6c9   nginx     "/docker-entrypoint.…"   14 minutes ago   Exited (0) 52 seconds ago             test
+
+# 컨테이너 삭제
+PS> docker rm test
+PS> docker ps -a
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+### 4-5. 컨테이너 실행 실습 (hello-world, ubuntu)
+
+```powershell
+# hello-world 실행 (로컬에 이미지가 없어 자동으로 pull 후 실행)
+PS> docker run hello-world
+Unable to find image 'hello-world:latest' locally
+latest: Pulling from library/hello-world
+...
+Status: Downloaded newer image for hello-world:latest
+
+# 실행성공 메시지 출력
+Hello from Docker! 
+This message shows that your installation appears to be working correctly.
+
+To generate this message, Docker took the following steps:
+ 1. The Docker client contacted the Docker daemon.
+ 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+    (amd64)
+ 3. The Docker daemon created a new container from that image which runs the
+    executable that produces the output you are currently reading.
+ 4. The Docker daemon streamed that output to the Docker client, which sent it
+    to your terminal.
+...
+
+PS> docker ps -a # 명령 실행하고 중지됨
+CONTAINER ID   IMAGE         COMMAND    CREATED         STATUS                     PORTS     NAMES
+b02ef7814360   hello-world   "/hello"   3 minutes ago   Exited (0) 3 minutes ago             upbeat_einstein
+
+# 컨테이너 삭제
+PS> docker rm <CONTAINER ID>
+PS> ps -a
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
 
 
 ## 5. 트러블슈팅
